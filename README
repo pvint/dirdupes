@@ -1,0 +1,2 @@
+To compile:
+g++ dirdupes.cpp  -lboost_system -lboost_filesystem -o dirdupes
