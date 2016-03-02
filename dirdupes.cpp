@@ -4,11 +4,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-<<<<<<< HEAD
 
 #include <boost/crc.hpp>  // for boost::crc_32_type
-=======
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 #include "dirdupes.h"
 
 
