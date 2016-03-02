@@ -15,7 +15,6 @@
 using namespace std;
 using namespace boost::filesystem;
 
-<<<<<<< HEAD
 int crcString ( string s )
 {
 	boost::crc_32_type result;
@@ -42,9 +41,6 @@ string listFiles ( path p )
 
 
 int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
-=======
-int getSubdirs( const char *path, vector<Directory>& v, int count )
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 {
 	// Get subdirs and add them to the vector
 	vector<directory_entry> dv;
@@ -58,15 +54,10 @@ int getSubdirs( const char *path, vector<Directory>& v, int count )
 		copy( directory_iterator( path ), directory_iterator (), back_inserter( dv ) );	
 		for ( vector<directory_entry>::const_iterator it = dv.begin(); it != dv.end();  ++ it )
 		{
-<<<<<<< HEAD
 			int oldDepth = depth;	// Save the depth value when descending directory so it's correct when coming back up
 			if( is_directory(*it) )
 			{
-=======
-			if( is_directory(*it) )
-			{
 				count++;
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 				//std::cout<< (*it).path().string() << endl;
 
 				// Create Directory object
@@ -81,7 +72,6 @@ int getSubdirs( const char *path, vector<Directory>& v, int count )
 				}
 				// create md5 hash of path strings
 
-<<<<<<< HEAD
 				// To set the depth of each, need to increment when descending directories
 				// and then decrement when coming back up
 				
@@ -91,13 +81,6 @@ int getSubdirs( const char *path, vector<Directory>& v, int count )
 
 				d->depth = depth;
 				depth = oldDepth;
-=======
-
-				cnt = getSubdirs ( (*it).path().string().c_str(), v, 0 );
-				count += cnt;
-
-				d->subdirs = cnt;
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 
 				v.push_back( *d );
 				delete d;
@@ -105,12 +88,9 @@ int getSubdirs( const char *path, vector<Directory>& v, int count )
 
 				cout << "\r" << count ;
 			}
-<<<<<<< HEAD
 			
 			// reset the depth 
 			depth = oldDepth;
-=======
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 		}
 
 		return count;
@@ -173,11 +153,7 @@ int main(int argc, char** argv) {
 	int x;
 	cout << "Directories found:" << endl;
 
-<<<<<<< HEAD
 	x = getSubdirs( baseDir.c_str(), directories ,0 ,0);
-=======
-	x = getSubdirs( baseDir.c_str(), directories ,0 );
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 
 
 	vector<Directory>::iterator it; 
@@ -185,11 +161,7 @@ int main(int argc, char** argv) {
 	for(it=directories.begin() ; it < directories.end(); it++ )
 	{
 		// Just show the path for now
-<<<<<<< HEAD
 		cout << (*it).depth << ": " << (*it).subdirs << " " << (*it).getPath() << endl;
-=======
-		cout << (*it).subdirs << " " << (*it).getPath() << endl;
->>>>>>> c534e4a52de02e95210859c7dce1998b4880441b
 	}
 
 	cout << x << " directories found" << endl;
