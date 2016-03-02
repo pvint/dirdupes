@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 
 #include <boost/crc.hpp>  // for boost::crc_32_type
+#include <boost/bind.hpp>
 #include "dirdupes.h"
 
 
@@ -27,11 +28,8 @@ string listFiles ( path p )
 	// cycle through the directory
 	for (directory_iterator itr(p); itr != end_itr; ++itr)
 	{
-		// If it's not a directory, list it. If you want to list directories too, just remove this check.
-		if (is_regular_file(itr->path())) {
-			// assign current file name to current_file and echo it out to the console.
-			s += itr->path().string();
-		}
+		s += itr->path().string();
+	cout << s << endl;
         }
 	return s;    
 }
@@ -43,6 +41,7 @@ int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 	vector<directory_entry> dv;
 	vector<directory_entry> subdv;
 
+	string files;
 	int cnt;
 	string contents;	// use a simple concatenated string to create a quick hash of contents
 
@@ -59,6 +58,12 @@ int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 
 				// Create Directory object
 				Directory *d = new Directory( (*it).path().string() );
+
+				// Get directory listing CRC
+				// FIXME For now calling two functions, one to get a string, one to get CRC
+				// FIXME Need to come up with a nice efficient method, but this works for now
+				files = listFiles( (*it).path() );
+				d->childCRC = crcString( files );
 
 				// create hash of names of directory items (to quickly be able to discard non-dupes)
 				string s;
@@ -154,19 +159,39 @@ int main(int argc, char** argv) {
 
 
 	vector<Directory>::iterator it; 
+	vector<Directory>::iterator dit;
 
 	for(it=directories.begin() ; it < directories.end(); it++ )
 	{
 		// Just show the path for now
-		cout << (*it).depth << ": " << (*it).subdirs << " " << (*it).getPath() << endl;
+		cout << (*it).depth << ": " << (*it).childCRC << "|" << (*it).subdirs << " " << (*it).getPath() << endl;
+		/* bogus search with boost::bind
+		std::vector<Directory>::iterator dit = std::find_if(
+				directories.begin(),
+				directories.end(),
+				boost::bind(&Directory::childCRC, _1) == (*it).childCRC );
+
+		vector<Directory>::iterator foundIt;
+		for ( foundIt = dit.begin(); foundIt < dit.end; foundIt++ )
+		{
+			cout << "Found one!" << endl;
+		}
+		*/
+		for(dit=directories.begin() ; dit < directories.end(); dit++ )
+		{
+			// Check if crc matches any others - remove item if not
+			if ( (*it).childCRC == (*dit).childCRC )
+			{
+				cout << (*it).path << " has dupe(s)!! " << (*dit).childCRC << endl;
+			}
+		}
+
 	}
 
 	cout << x << " directories found" << endl;
 	//cout << directories.size() << " items in vector" << endl;
 
 	return 0;
-
-	
 
 
     return 0;
