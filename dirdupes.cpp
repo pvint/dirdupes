@@ -28,7 +28,7 @@ string listFiles ( path p )
 	// cycle through the directory
 	for (directory_iterator itr(p); itr != end_itr; ++itr)
 	{
-		s += itr->path().string();
+		s += itr->path().filename().string();
 	cout << s << endl;
         }
 	return s;    
@@ -180,9 +180,10 @@ int main(int argc, char** argv) {
 		for(dit=directories.begin() ; dit < directories.end(); dit++ )
 		{
 			// Check if crc matches any others - remove item if not
-			if ( (*it).childCRC == (*dit).childCRC )
+			if ( ( (*it).childCRC == (*dit).childCRC ) && ( (*it).path != (*dit).path ) )
 			{
-				cout << (*it).path << " has dupe(s)!! " << (*dit).childCRC << endl;
+				cout << (*it).path << " has dupe(s)!! " << (*dit).childCRC << " and " << (*dit).path << endl;
+				
 			}
 		}
 
