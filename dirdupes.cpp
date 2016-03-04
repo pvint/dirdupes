@@ -1,6 +1,7 @@
-#include<iostream>
-#include<string>
+#include <iostream>
+#include <string>
 #include <vector>
+#include <set>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -12,6 +13,9 @@
 
 using namespace std;
 using namespace boost::filesystem;
+
+int dirCount = 0;
+bool skipEmpty = true;
 
 int crcString ( string s )
 {
@@ -34,6 +38,31 @@ string listFiles ( path p )
 	return s;    
 }
 
+void  getDirectorySize(string rootFolder,long & file_size){
+        //replace_all(rootFolder, "\\\\", "\\");   
+        path folderPath(rootFolder);                      
+        if (exists(folderPath)){
+            directory_iterator end_itr;
+
+            for (directory_iterator dirIte(rootFolder); dirIte != end_itr; ++dirIte )
+            {
+                path filePath(dirIte->path());
+                try{
+                    if (!is_directory(dirIte->status()) )
+                    {
+cout << filePath << endl;
+                        file_size = file_size + boost::filesystem::file_size(filePath);                      
+                    }else{
+                        //getDirectorySize(filePath.string(),file_size);
+                    }
+                }catch(exception& e){               
+                    cout << e.what() << endl;
+                }
+            }
+        }
+
+    }
+
 
 int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 {
@@ -42,7 +71,7 @@ int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 	vector<directory_entry> subdv;
 
 	string files;
-	int cnt;
+	int cnt = count;
 	string contents;	// use a simple concatenated string to create a quick hash of contents
 
 	if ( is_directory( path ) )
@@ -53,8 +82,9 @@ int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 			int oldDepth = depth;	// Save the depth value when descending directory so it's correct when coming back up
 			if( is_directory(*it) )
 			{
-				count++;
-				//std::cout<< (*it).path().string() << endl;
+
+				std::cout<< "ZZZ" << (*it).path().string() << endl;
+				dirCount ++;
 
 				// Create Directory object
 				Directory *d = new Directory( (*it).path().string() );
@@ -77,8 +107,8 @@ int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 				// To set the depth of each, need to increment when descending directories
 				// and then decrement when coming back up
 				
-				count += getSubdirs ( (*it).path().string().c_str(), v, count, depth + 1 );
-
+				count += getSubdirs ( (*it).path().string().c_str(), v, cnt, depth + 1 );
+				//cout << "==== " << (*it).path().string() << endl;
 				d->subdirs = cnt;
 
 				d->depth = depth;
@@ -87,26 +117,26 @@ int getSubdirs( const char *path, vector<Directory>& v, int count, int depth )
 				v.push_back( *d );
 				delete d;
 
+				cnt++;
 
 				cout << "\r" << count ;
 			}
 			
 			// reset the depth 
-			depth = oldDepth;
+			depth = oldDepth;	// FIXME
 		}
 
-		return count;
+		return cnt;
 	}
 	return 0;
 }
 
 int main(int argc, char** argv) {
-    int opt;
+    int opt, cnt = 0;
     string baseDir = "";
     bool flagA = false;
     bool flagB = false;
 
-    int dirCount = 0;
 
     struct stat st;
 
@@ -156,13 +186,23 @@ int main(int argc, char** argv) {
 	cout << "Directories found:" << endl;
 
 	x = getSubdirs( baseDir.c_str(), directories ,0 ,0);
-
+cout << "DIRS: " << directories.size();
 
 	vector<Directory>::iterator it; 
 	vector<Directory>::iterator dit;
 
+	
+	vector<Directory> round1;
+
+	//DirDupes dupes;
+	// Testing using std::set rather than vector to store dupe paths
+	set<string> dupes;
+
+	// TODO  Try a few different mothods of searching for dupes and time them
 	for(it=directories.begin() ; it < directories.end(); it++ )
 	{
+		cnt++; 
+
 		// Just show the path for now
 		cout << (*it).depth << ": " << (*it).childCRC << "|" << (*it).subdirs << " " << (*it).getPath() << endl;
 		/* bogus search with boost::bind
@@ -183,14 +223,48 @@ int main(int argc, char** argv) {
 			if ( ( (*it).childCRC == (*dit).childCRC ) && ( (*it).path != (*dit).path ) )
 			{
 				cout << (*it).path << " has dupe(s)!! " << (*dit).childCRC << " and " << (*dit).path << endl;
+
+				// Flag each as a potential dupe
+				(*it).potentialDupe = true;
+				(*dit).potentialDupe = true;
+
+				// insert paths into std::set
+				dupes.insert( (*it).path );
+				dupes.insert( (*dit).path );
 				
+
+			}
+			else
+			{
+				//(*dit).potentialDupe = false;	// Do I need to do this? Set fasle by default?? TODO
+				// Just erase the iterator object!!! 
+				// TODO NOT TESTED YET!!!  it = directories.erase(it);
 			}
 		}
 
 	}
 
-	cout << x << " directories found" << endl;
-	//cout << directories.size() << " items in vector" << endl;
+	cout << dirCount + 1 << " directories found" << endl;
+	cout << dupes.size() << " potential dupes found in round 1" << endl << endl;
+
+
+	// Free the memory - need to save anything first? FIXME
+	directories.clear();
+	set<string>::iterator sit;
+
+	long dirSize = 0;
+	long totSize = 0;
+	for ( sit = dupes.begin(); sit != dupes.end(); sit++ )
+	{
+		// Now get the total filesize of each file in dir (non-recursive)
+		// TODO: Better to do it recursively right now maybe?
+		//cout << *sit << endl;
+		dirSize = 0;
+		getDirectorySize( *sit, dirSize ) ;
+		cout << *sit << ": " << dirSize << endl;
+		totSize += dirSize;
+	}
+cout << totSize << endl;
 
 	return 0;
 

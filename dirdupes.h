@@ -16,6 +16,7 @@ class Directory
 
 		int childCRC;
 		int depth;
+		bool potentialDupe;
 
 		Directory( string _path )
 		{
@@ -39,3 +40,9 @@ class Directory
      // Local attributes
 };
               
+class DirDupes
+{
+	public:
+		set<string> paths;
+
+};
