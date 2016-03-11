@@ -1,7 +1,8 @@
 #include <string>
 #include <boost/filesystem.hpp>
 #include <boost/range/iterator_range.hpp>
-#include "md5/md5.h"
+#include <openssl/md5.h>
+
 
 using namespace std;
 
@@ -12,17 +13,18 @@ class Directory
 		string path, name;
 		int inode, numfiles, subdirs;
 		long int du;
-		md5_byte_t listingMD5;
 
+		unsigned char digest[MD5_DIGEST_LENGTH];
 		int childCRC;
 		int depth;
 		bool potentialDupe;
 
+		/*
 		Directory( string _path )
 		{
 			path = _path;
 		}
-
+*/
 
 		string getPath()
 		{
@@ -32,7 +34,7 @@ class Directory
 		int getSubdirs();
 
 		// Constructor
-  		Directory( int numfiles = 0, int subdirs = 0, int depth = 0 );
+  		//Directory( int numfiles = 0, int subdirs = 0, int depth = 0 );
 
   protected:
      // Attributes visible to descendents
