@@ -43,6 +43,19 @@ void print_md5_sum(unsigned char* md) {
     }
 }
 
+bool compareMD5( unsigned char* md1, unsigned char* md2 )
+{
+	for(unsigned i=0; i <MD5_DIGEST_LENGTH; i++)
+	{
+		if ( md1[i] != md2[i] )
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 void hashFile ( const char *fname, unsigned char* d ) 
 {
 
@@ -64,6 +77,33 @@ void hashFile ( const char *fname, unsigned char* d )
         return; 
 }
 
+// create md5 hash of all files in directory
+void hashDir ( const char *dname, unsigned char* d )
+{
+	MD5_CTX ctx;
+	MD5_Init(&ctx);
+	int cnt = 0;
+	
+
+	char *fname;
+	directory_iterator end_itr;
+	for (directory_iterator itr( dname ); itr != end_itr; ++itr)
+	{
+		ifstream ifs(itr->path().string().c_str(), std::ios::binary);
+
+		char file_buffer[4096];
+		while ( ( ifs.read(file_buffer, sizeof(file_buffer)) || ifs.gcount() ) && ( cnt < MD5SAMPLESIZE ) )
+		{
+			MD5_Update(&ctx, file_buffer, ifs.gcount());
+		}
+		cnt++;
+		cerr << cnt << "\r";
+	}
+
+	MD5_Final(d, &ctx);
+	return;
+}
+
 string hashString ( string s ) 
 {
 
@@ -71,7 +111,7 @@ string hashString ( string s )
 	char digest_str[2*MD5_DIGEST_LENGTH+1];
 
 	MD5( (const unsigned char*)s.c_str(), s.length(), digest );
-        return; 
+        return s; 
 }
 
 
@@ -200,6 +240,7 @@ int main(int argc, char** argv) {
     string baseDir = "";
     bool includeEmpty = false;
     bool flagB = false;
+    bool unique = false;
 
 	unsigned char digest[MD5_DIGEST_LENGTH] = {};
 
@@ -287,7 +328,7 @@ cerr << "DIRS: " << directories.size();
 			// Check if crc matches any others - remove item if not
 			if ( ( (*it).childCRC == (*dit).childCRC ) && ( (*it).path != (*dit).path ) )
 			{
-				cerr << (*it).path << " has dupe(s)!! " << (*dit).childCRC << " and " << (*dit).path << endl;
+				//cerr << (*it).path << " has dupe(s)!! " << (*dit).childCRC << " and " << (*dit).path << endl;
 
 				// Flag each as a potential dupe
 				(*it).potentialDupe = true;
@@ -342,7 +383,7 @@ cerr << "DIRS: " << directories.size();
 			d.du = dirSize;
 
 			round1.push_back( d );
-			cerr << *sit << ": " << dirSize << endl;
+			//cerr << *sit << ": " << dirSize << endl;
 			totSize += dirSize;
 		}
 	}
@@ -359,7 +400,7 @@ cerr << "DIRS: " << directories.size();
 		{
 			if ( ( (*it).du == (*dit).du ) && ( (*it).path != (*dit).path ) )
 			{
-				infoLog ( (*it).path + " has duplicate content size of:\t" + (*dit).path );
+				//infoLog ( (*it).path + " has duplicate content size of:\t" + (*dit).path );
 				// save for next round
 				directories.push_back( *it);
 			}
@@ -369,23 +410,62 @@ cerr << "DIRS: " << directories.size();
 
 	round1.clear();
 
-	// Try this: 
-	// 1. create a string of all files in each dir, then make md5 hash of that and save in object
-	// 2. After those are compared and non-dupes weeded out, create an md5 hash of ALL files (non-recursive) in the dir
+	// Compare md5 sums
+	directory_iterator end_itr;
 
-	// Create hash of filenames in dir
-	string ls = "";
+	cerr << endl << "Checking md5 sums in " << directories.size() << " directories:" << endl;
 
 	for(it=directories.begin() ; it < directories.end(); it++ )
 	{
-		for (directory_iterator itr( (*it).path ); itr != end_itr; ++itr)
-		{
-			ls += itr->path().string();	
-		}
-		
+		hashDir( (*it).path.c_str(), digest );
+		//cerr << "ZZZ: " << (*it).path << endl;; 
+		//print_md5_sum( digest );
+		//cerr << endl;
+		memcpy( (*it).digest, digest, sizeof(digest) );
 	}
 
-	cerr << directories.size() << " directories with dupes" << endl;
+	// Check for unique md5s
+	round1.clear();
+	
+	for(it=directories.begin() ; it < directories.end(); it++ )
+	{
+		unique = true;
+		cout << "XXX: " << (*it).path; // << endl;
+		print_md5_sum( (*it).digest );
+		cout << endl;
+
+		for ( dit = directories.begin(); dit < directories.end(); dit++ )
+		{	
+			if ( (*it).digest == (*dit).digest )
+			{
+				unique = false;
+				//cerr << "Removing " << (*dit).path << endl;
+			}
+		}
+
+		if ( !unique )
+		{
+			round1.push_back( (*it) );
+			//cerr << "Keeping " << (*dit).path << endl;
+		}
+	}
+
+	cout << round1.size() << " directories with dupes" << endl;
+
+	for(it=round1.begin() ; it < round1.end(); it++ )
+	{
+		cerr << endl << (*it).path << ":" << endl;
+
+		for(dit=round1.begin() ; dit < round1.end(); dit++ )
+		{
+			if( ( compareMD5( (*it).digest, (*dit).digest ) && ( (*it).childCRC == (*dit).childCRC ) && ( (*it).path != (*dit).path ) ) )
+			{
+				cerr << "\t" << (*dit).path;
+				print_md5_sum( (*dit).digest );
+				cerr << endl;
+			}
+		}
+	}
 
 	
 	// md5 test
@@ -397,6 +477,5 @@ cerr << "DIRS: " << directories.size();
 	return 0;
 
 
-    return 0;
 }
 
